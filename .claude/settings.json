@@ -1,0 +1,7 @@
+{
+  "hooks": {
+    "skill-stop": [
+      "cd /Users/fanyong/.claude/skills/minimal && bash .claude/sync.sh"
+    ]
+  }
+}
