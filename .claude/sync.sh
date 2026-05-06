@@ -74,15 +74,15 @@ REPO_NAME=$(basename "$PWD")
 # 检查/创建 GitHub 仓库
 if ! git remote | grep -q "github"; then
     check_and_create_github "$REPO_NAME"
-    git remote add github "git@github.com:$GITHUB_USER/$REPO_NAME.git" 2>/dev/null || \
-    git remote set-url github "git@github.com:$GITHUB_USER/$REPO_NAME.git"
+    git remote add github "https://${GITHUB_TOKEN}@github.com/$GITHUB_USER/$REPO_NAME.git" 2>/dev/null || \
+    git remote set-url github "https://${GITHUB_TOKEN}@github.com/$GITHUB_USER/$REPO_NAME.git"
 fi
 
 # 检查/创建 Gitee 仓库
 if ! git remote | grep -q "gitee"; then
     check_and_create_gitee "$REPO_NAME"
-    git remote add gitee "git@gitee.com:$GITEE_USER/$REPO_NAME.git" 2>/dev/null || \
-    git remote set-url gitee "git@gitee.com:$GITEE_USER/$REPO_NAME.git"
+    git remote add gitee "https://${GITEE_TOKEN}@gitee.com/$GITEE_USER/$REPO_NAME.git" 2>/dev/null || \
+    git remote set-url gitee "https://${GITEE_TOKEN}@gitee.com/$GITEE_USER/$REPO_NAME.git"
 fi
 
 # 获取当前时间戳
