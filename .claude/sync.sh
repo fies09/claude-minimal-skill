@@ -29,9 +29,8 @@ echo -e "${BLUE}║    自动同步项目: ${REPO_NAME}${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════╝${NC}"
 echo ""
 
-# 配置 git 用户信息
-git config user.name "$GIT_NAME"
-git config user.email "$GIT_EMAIL"
+# 配置 git 避免交互式提示
+git config --local credential.helper store 2>/dev/null || true
 
 # 检查是否有变更（包括未跟踪文件）
 if git diff --quiet && git diff --staged --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
