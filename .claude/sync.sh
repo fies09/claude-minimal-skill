@@ -1,14 +1,16 @@
 #!/bin/bash
-# 自动同步脚本 - 每次 /minimal 技能执行完毕后自动推送
+# 自动同步脚本 - 每次 /minimal 技能执行完毕后自动推送当前项目
 
-cd "$(dirname "$0")/.." || exit 1
+# 从环境变量获取项目路径，默认为当前目录
+PROJECT_PATH="${CLAUDE_WORKSPACE:-$(pwd)}"
+cd "$PROJECT_PATH" || exit 1
 
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 # Git 用户信息
 GIT_NAME="fies09"
@@ -18,9 +20,12 @@ GITEE_USER="fies09"
 GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 GITEE_TOKEN="${GITEE_TOKEN:-}"
 
+# 获取项目名称（当前目录名）
+REPO_NAME=$(basename "$PWD")
+
 echo ""
 echo -e "${BLUE}╔══════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║       自动同步到 GitHub/Gitee        ║${NC}"
+echo -e "${BLUE}║    自动同步项目: ${REPO_NAME}${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════╝${NC}"
 echo ""
 
@@ -67,9 +72,6 @@ check_and_create_gitee() {
         echo "[✓] Gitee 仓库已创建"
     fi
 }
-
-# 获取仓库名
-REPO_NAME=$(basename "$PWD")
 
 # 检查/创建 GitHub 仓库
 if ! git remote | grep -q "github"; then
