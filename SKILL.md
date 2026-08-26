@@ -245,7 +245,90 @@ Subagent 返回后主会话仍需按第 2 条输出进度节点。
 
 ---
 
-## 10. 语言规则
+## 10. Python 环境约定（强制）
+
+**默认使用 conda，禁止 python -m venv**
+
+- **检查环境存在性**：`conda env list | grep -w '<env_name>'` 或 `conda info --envs`
+- **环境存在**：激活使用 `conda activate <env_name>`
+- **环境不存在**：创建新环境 `conda create -n <env_name> python=<version> -y`
+- **依赖安装**：`conda install` 优先，conda 无法解决的用 `pip install`
+- **彻底禁止**：`python3 -m venv .venv`、`source .venv/bin/activate`
+
+**命名规则**：
+- 项目目录为 `myproject` → 环境名 `myproject` 或 `myproject_env`
+- 用户项目优先使用 `~/miniforge3/bin/conda` 路径
+
+---
+
+## 11. 大体积数据操作策略（强制）
+
+**触发条件**：单次操作预估产物或影响数据量 ≥ 1GB。涵盖**下载/拉取**与**备份/导出/拷贝/清理**两类：
+
+- **下载/拉取**：镜像、包、模型、二进制、git 仓库、解压产物等
+- **备份/导出**：数据库 dump、volume 备份、目录 tar 归档、大文件 rsync/cp 等
+- **数据清理**：删除/重建 ≥1GB 的 volume、容器、数据库、目录
+
+**覆盖命令**（不限于）：
+
+下载/拉取类：
+- `docker pull` / `docker compose pull`
+- `pip install` / `pip download` / `uv pip install` / `poetry add` / `pdm add`
+- `conda install` / `mamba install`
+- `brew install` / `brew install --cask`
+- `npm install` / `pnpm install` / `yarn add`（含 monorepo 全量安装）
+- `cargo install` / `go install`（含工具链）
+- `git clone`（浅克隆例外）
+- `huggingface-cli download` / `modelscope download` / `ollama pull`
+- `curl -O` / `wget` 大文件
+- `xcode-select --install` / 系统级下载
+
+备份/导出类：
+- `pg_dump` / `mysqldump` / `mongodump` / `redis-cli --rdb` 等数据库备份
+- `docker volume` 备份（`run --rm -v xxx:/data` 镜像挂载导出）
+- `tar -czf` / `zip` / `7z a` 大目录归档
+- `rsync` / `cp` / `mv` ≥1GB 的数据
+- `scp` / `rclone` / `aws s3 cp` 等大批量传输
+- 数据库 `EXPORT`、`COPY TO`、表导入导出
+
+数据清理类：
+- `docker volume rm` / `docker volume prune`
+- `docker system prune -a`
+- `rm -rf` ≥1GB 目录或 `truncate` 大文件
+- `DROP DATABASE` / `DROP TABLE` 含大表
+- 任何可能造成 ≥1GB 数据丢失的操作
+
+**规则（强制）**：
+1. **禁止自动执行**：不调用 Bash 直接跑上述命令。
+2. **必须输出命令**：用代码块完整列出用户需手动执行的命令（含镜像源/加速/版本号等关键参数）。
+3. **给出体积与依赖说明**：在命令下方 1-2 行标注预估体积、是否含 GPU/CUDA 依赖、是否需翻墙、推荐替代方案。
+4. **保留任务可继续**：代码改动、配置写入、文档等照常落盘，仅把"下载/备份/清理动作"外包给用户。
+5. **二次确认**：备份/清理类操作必须在命令块上方明确标注 **数据风险**（"此操作会删除 xxx"、"备份未完成前删除会丢数据"等），避免误操作。
+6. **用户手动跑完再继续**：检测到依赖未到位或备份未完成时，告知用户等待并在下一轮会话/消息继续。
+
+**输出模板**（必出现，命令之间用空行分隔）：
+````
+需手动执行（预估 ≥1GB）：
+```bash
+<完整命令 1>
+```
+体积/依赖：<说明>
+
+```bash
+<完整命令 2>
+```
+体积/依赖：<说明>
+````
+
+**白名单（无需走本流程）**：
+- 单文件 < 1MB 的源码/配置拉取
+- `git pull` 已存在的本地仓库
+- `npm install` 增量安装（lockfile 命中、纯增量）< 1GB
+- 用户明确说"直接跑"、"帮我装上"、"执行 xxx"等指令
+
+---
+
+## 12. 语言规则
 
 - 跟随用户语言（中文→中文，英文→英文）
 - 代码中的注释（如果确实需要）使用英文
