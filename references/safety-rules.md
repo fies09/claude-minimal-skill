@@ -26,24 +26,13 @@
 
 ---
 
-## 下载操作确认
+## 下载与安装
 
-涉及以下操作时需先询问：
-- 包管理：pip install、npm install、apt-get、brew install
-- 文件下载：wget、curl、git clone
-- 模型下载：huggingface、预训练权重
-- 镜像拉取：docker pull
+涉及包管理、文件下载、模型下载、镜像拉取（`pip install`、`npm install`、`apt-get`、
+`brew install`、`wget`、`curl` 下载、`git clone`、huggingface 权重、`docker pull`）时：
 
-**流程：**
-1. 询问：自动下载 or 手动下载？
-2. 自动下载：直接执行
-3. 手动下载：展示命令，等待"已完成"
-
-**手动下载输出格式：**
-```
-需手动执行：
-pip install torch torchvision
-npm install react react-dom
-
-完成后回复"已完成"
-```
+1. **先在沙箱内直接执行**，不预先询问用户 —— 多数情况一次成功。
+2. 失败且属沙箱/环境限制 → 交由用户手动执行，按全局规则
+   `~/.claude/rules/install-handoff.md` 的固定格式给出命令 + 验证命令，等用户回复；
+   同一安装命令不重试。
+3. 涉及删除本地文件 → 按上方删除确认流程逐项列出并等确认。
