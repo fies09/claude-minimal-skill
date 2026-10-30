@@ -68,17 +68,13 @@ else
     echo -e "${RED}✗${NC} GITEE_TOKEN 未设置"
 fi
 
-# 检查技能钩子
+# 检查手动同步脚本
 echo ""
-echo -e "${BLUE}[技能钩子]${NC}"
-if [ -f ".claude/settings.json" ]; then
-    if grep -q "skill-stop" .claude/settings.json; then
-        echo -e "${GREEN}✓${NC} skill-stop 钩子已配置"
-    else
-        echo -e "${YELLOW}!${NC} skill-stop 钩子未配置"
-    fi
+echo -e "${BLUE}[同步脚本]${NC}"
+if [ -f ".claude/sync.sh" ]; then
+    echo -e "${GREEN}✓${NC} sync.sh 已就绪（手动执行：bash .claude/sync.sh）"
 else
-    echo -e "${RED}✗${NC} settings.json 不存在"
+    echo -e "${RED}✗${NC} sync.sh 不存在"
 fi
 
 # 检查连接

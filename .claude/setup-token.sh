@@ -10,15 +10,18 @@ echo ""
 read -p "请输入 GitHub Personal Access Token: " GITHUB_TOKEN
 read -p "请输入 Gitee Access Token: " GITEE_TOKEN
 
+# 令牌只进 Keychain，不写 ~/.zshrc 明文、不进 .git/config
 if [ -n "$GITHUB_TOKEN" ]; then
-    echo "export GITHUB_TOKEN=$GITHUB_TOKEN" >> ~/.zshrc
-    echo "[✓] GitHub Token 已添加到 ~/.zshrc"
+    security add-generic-password -U -a fies09 -s claude-gh-token -w "$GITHUB_TOKEN"
+    echo "[✓] GitHub Token 已存入 Keychain (claude-gh-token)"
 fi
 
 if [ -n "$GITEE_TOKEN" ]; then
-    echo "export GITEE_TOKEN=$GITEE_TOKEN" >> ~/.zshrc
-    echo "[✓] Gitee Token 已添加到 ~/.zshrc"
+    security add-generic-password -U -a fies09 -s claude-gitee-token -w "$GITEE_TOKEN"
+    echo "[✓] Gitee Token 已存入 Keychain (claude-gitee-token)"
 fi
 
 echo ""
-echo "请运行: source ~/.zshrc 使配置生效"
+echo "读取方式（写进 ~/.zshrc 时用命令替换取实时值，不留明文）："
+echo "  export GITHUB_TOKEN=\$(security find-generic-password -a fies09 -s claude-gh-token -w)"
+echo "  export GITEE_TOKEN=\$(security find-generic-password -a fies09 -s claude-gitee-token -w)"

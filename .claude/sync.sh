@@ -1,8 +1,20 @@
 #!/bin/bash
-# 自动同步脚本 - 每次 /minimal 技能执行完毕后自动推送当前项目
+# 手动同步脚本 - 把当前工作目录的 git 仓库提交并推送到 GitHub / Gitee
+#
+# 手动调用：cd <目标项目> && bash /Users/fanyong/.claude/skills/minimal/.claude/sync.sh
+#
+# 原先由 skill-stop 钩子自动触发，但 Claude Code 没有 skill-stop / skill-start
+# 事件，skill 目录的 .claude/settings.json 也不是有效作用域 —— 该钩子从不触发，
+# 自动推送链已废弃。本脚本改为纯手动入口。
 
-# 从环境变量获取项目路径，默认为当前目录
-PROJECT_PATH="${CLAUDE_WORKSPACE:-$(pwd)}"
+# 使用当前工作目录（skill-stop 钩子自动设置为用户项目目录）
+PROJECT_PATH="$(pwd)"
+
+# 检查是否为 git 仓库
+if [ ! -d "$PROJECT_PATH/.git" ]; then
+    exit 0
+fi
+
 cd "$PROJECT_PATH" || exit 1
 
 # 颜色定义
@@ -29,8 +41,9 @@ echo -e "${BLUE}║    自动同步项目: ${REPO_NAME}${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════╝${NC}"
 echo ""
 
-# 配置 git 避免交互式提示
-git config --local credential.helper store 2>/dev/null || true
+# 配置 git 用户信息
+git config user.name "$GIT_NAME"
+git config user.email "$GIT_EMAIL"
 
 # 检查是否有变更（包括未跟踪文件）
 if git diff --quiet && git diff --staged --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
@@ -40,7 +53,17 @@ fi
 
 echo -e "${BLUE}▶ 检测到变更，准备提交...${NC}"
 
-# 检查远程仓库是否存在并自动创建
+# 提交前检查待提交文件是否含敏感文件，命中则中止（不动暂存区、不改远端配置）
+CANDIDATE_FILES=$( { git ls-files --others --exclude-standard; git diff --name-only; git diff --staged --name-only; } | sort -u )
+SECRET_PATTERN='(^|/)\.env$|(^|/)\.env\.local$|(^|/)\.env\..*\.local$|(^|/)\.pem$|(^|/)\.p12$|(^|/)\.key$|(^|/)\.npmrc$|(^|/)\.netrc$|(^|/)id_rsa|(^|/)credentials[^/]*\.json$'
+if echo "$CANDIDATE_FILES" | grep -Eq "$SECRET_PATTERN"; then
+    echo -e "${RED}✗ 待提交文件含疑似敏感文件，已中止同步:${NC}"
+    echo "$CANDIDATE_FILES" | grep -E "$SECRET_PATTERN" | sed 's/^/    /'
+    echo -e "${YELLOW}  请先把这些文件加入 .gitignore，或改用 git add 指定文件后再手动提交${NC}"
+    exit 1
+fi
+
+# 检查远程仓库是否存在并自动创建（默认私有，避免把项目内容公开发布）
 check_and_create_github() {
     local repo="$1"
     local resp
@@ -49,11 +72,16 @@ check_and_create_github() {
 
     if [ "$resp" != "200" ] && [ -n "$GITHUB_TOKEN" ]; then
         echo "[→] GitHub 仓库不存在，正在创建..."
-        curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
+        local code
+        code=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            -d "{\"name\":\"$repo\",\"private\":false}" \
-            "https://api.github.com/user/repos" > /dev/null
-        echo "[✓] GitHub 仓库已创建"
+            -d "{\"name\":\"$repo\",\"private\":true}" \
+            "https://api.github.com/user/repos")
+        if [ "$code" = "201" ]; then
+            echo "[✓] GitHub 仓库已创建"
+        else
+            echo "[!] GitHub 仓库创建失败（HTTP $code），请手动创建后重试"
+        fi
     fi
 }
 
@@ -65,25 +93,30 @@ check_and_create_gitee() {
 
     if [ "$resp" != "200" ] && [ -n "$GITEE_TOKEN" ]; then
         echo "[→] Gitee 仓库不存在，正在创建..."
-        curl -s -X POST "https://gitee.com/api/v5/user/repos" \
+        local code
+        code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "https://gitee.com/api/v5/user/repos" \
             -H "Content-Type: application/json" \
-            -d "{\"access_token\":\"$GITEE_TOKEN\",\"name\":\"$repo\",\"private\":false}" > /dev/null
-        echo "[✓] Gitee 仓库已创建"
+            -d "{\"access_token\":\"$GITEE_TOKEN\",\"name\":\"$repo\",\"private\":true}")
+        if [ "$code" = "201" ]; then
+            echo "[✓] Gitee 仓库已创建"
+        else
+            echo "[!] Gitee 仓库创建失败（HTTP $code），请手动创建后重试"
+        fi
     fi
 }
 
-# 检查/创建 GitHub 仓库
+# 检查/创建 GitHub 仓库（走 SSH，不把 token 写进 .git/config）
 if ! git remote | grep -q "github"; then
     check_and_create_github "$REPO_NAME"
-    git remote add github "https://${GITHUB_TOKEN}@github.com/$GITHUB_USER/$REPO_NAME.git" 2>/dev/null || \
-    git remote set-url github "https://${GITHUB_TOKEN}@github.com/$GITHUB_USER/$REPO_NAME.git"
+    git remote add github "git@github.com:$GITHUB_USER/$REPO_NAME.git" 2>/dev/null || \
+    git remote set-url github "git@github.com:$GITHUB_USER/$REPO_NAME.git"
 fi
 
-# 检查/创建 Gitee 仓库
+# 检查/创建 Gitee 仓库（走 https + Keychain 凭据助手，不把 token 写进 .git/config）
 if ! git remote | grep -q "gitee"; then
     check_and_create_gitee "$REPO_NAME"
-    git remote add gitee "https://${GITEE_TOKEN}@gitee.com/$GITEE_USER/$REPO_NAME.git" 2>/dev/null || \
-    git remote set-url gitee "https://${GITEE_TOKEN}@gitee.com/$GITEE_USER/$REPO_NAME.git"
+    git remote add gitee "https://gitee.com/$GITEE_USER/$REPO_NAME.git" 2>/dev/null || \
+    git remote set-url gitee "https://gitee.com/$GITEE_USER/$REPO_NAME.git"
 fi
 
 # 获取当前时间戳

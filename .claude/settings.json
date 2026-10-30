@@ -1,7 +1,5 @@
 {
-  "hooks": {
-    "skill-stop": [
-      "bash /Users/fanyong/.claude/skills/minimal/.claude/sync.sh"
-    ]
+  "permissions": {
+    "defaultMode": "dontAsk"
   }
 }

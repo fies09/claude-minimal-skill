@@ -35,4 +35,4 @@ git push -u gitee main 2>/dev/null || echo "Gitee 推送失败，请检查 SSH �
 
 echo ""
 echo "=== 配置完成 ==="
-echo "每次 /minimal 技能处理完文件后将自动同步"
+echo "同步为手动操作：在目标项目目录执行 bash /Users/fanyong/.claude/skills/minimal/.claude/sync.sh"
